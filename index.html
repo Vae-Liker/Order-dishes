@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>今日食堂决策器</title>
+    <title>食堂轮盘选择器</title>
     <style>
         body {
             font-family: 'Microsoft Yahei', sans-serif;
@@ -21,7 +21,22 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
             width: 90%;
-            max-width: 500px;
+            max-width: 800px;
+        }
+
+        .image-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .image-container img {
+            max-width: 45%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 3px solid #fff;
         }
 
         h1 {
@@ -29,16 +44,49 @@
             margin-bottom: 2rem;
         }
 
-        #result {
-            font-size: 2.5rem;
+        .grid {
+            position: relative;
+            min-height: 300px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
             margin: 2rem 0;
-            min-height: 80px;
-            color: #333;
-            font-weight: bold;
+            perspective: 1000px;
+        }
+
+        .stall-item {
             padding: 1rem;
-            background: #fff;
+            background: #f8f9fa;
             border-radius: 10px;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+            transform-origin: center center;
+            will-change: transform;
+            cursor: pointer;
+        }
+
+        .stall-item.selected {
+            transform: scale(2) translateY(-30%);
+            z-index: 10 !important;
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .blur-items .stall-item:not(.selected) {
+            filter: blur(2px);
+            opacity: 0.6;
+        }
+
+        .highlight-box {
+            position: absolute;
+            background: rgba(76, 175, 80, 0.2);
+            border: 3px solid #4CAF50;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+            transition: all 0.1s;
+            z-index: 0;
         }
 
         #spin-btn {
@@ -51,6 +99,7 @@
             cursor: pointer;
             transition: all 0.3s;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            margin-top: 1rem;
         }
 
         #spin-btn:disabled {
@@ -58,47 +107,75 @@
             cursor: not-allowed;
         }
 
-        #spin-btn.spinning {
-            background: #ff4444;
-            transform: scale(0.98);
-        }
-
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .blink {
-            animation: blink 0.3s infinite;
+        @media (max-width: 600px) {
+            .stall-item.selected {
+                transform: scale(1.8) translateY(-25%);
+            }
+            .image-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .image-container img {
+                max-width: 80%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🍚 今日吃什么？ 🥢</h1>
-        <div id="result">点击开始选择！</div>
-        <button id="spin-btn" onclick="toggleSpin()">点我决定！</button>
+        <div class="image-container">
+            <!-- 替换以下图片路径 -->
+            <img src="./1.jpg" alt="食堂档口1">
+            <img src="./2.jpg" alt="食堂档口2">
+        </div>
+
+        <h1>🎲 食堂轮盘选择 🍜</h1>
+        <div class="grid" id="grid"></div>
+        <button id="spin-btn" onclick="toggleSpin()">开始选择！</button>
     </div>
 
     <script>
-        // 预设的食堂档口列表（可自行修改）
+        // 自定义选项（修改此处）
         const stalls = [
-            "麻辣香锅", "石锅拌饭", 
-            "兰州拉面", "广式烧腊",
-            "重庆小面", "黄焖鸡米饭",
-            "饺子坊", "轻食沙拉",
-            "煲仔饭", "日式拉面",
-            "汉堡炸鸡", "瓦罐汤",
-            "陕西肉夹馍", "韩国料理",
-            "海南鸡饭", "台湾卤肉饭"
+           "智慧称菜", "二楼麻辣烫", "牛肉面",
+            "美食街螺狮粉", "穆兰羊", "混沌",
+            "瓦香鸡",  "煲仔饭",
+            "汉堡炸鸡"
         ];
 
+        let currentIndex = 0;
         let isSpinning = false;
-        let animationId;
-        let speed = 100;
-        const resultDiv = document.getElementById('result');
-        const spinBtn = document.getElementById('spin-btn');
+        let speed = 50;
+        let highlightBox;
+        let stallItems;
+        let targetIndex;
+
+        function init() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = stalls.map((stall, index) => `
+                <div class="stall-item" data-index="${index}">${stall}</div>
+            `).join('');
+
+            highlightBox = document.createElement('div');
+            highlightBox.className = 'highlight-box';
+            grid.appendChild(highlightBox);
+            
+            stallItems = document.querySelectorAll('.stall-item');
+            updateHighlightPosition(0);
+        }
+
+        function updateHighlightPosition(index) {
+            const target = stallItems[index];
+            const rect = target.getBoundingClientRect();
+            const gridRect = document.getElementById('grid').getBoundingClientRect();
+            
+            highlightBox.style.width = `${rect.width}px`;
+            highlightBox.style.height = `${rect.height}px`;
+            highlightBox.style.transform = `translate(
+                ${rect.left - gridRect.left}px, 
+                ${rect.top - gridRect.top}px
+            )`;
+        }
 
         function toggleSpin() {
             if (isSpinning) {
@@ -109,48 +186,54 @@
         }
 
         function startSpin() {
+            const grid = document.getElementById('grid');
+            grid.classList.remove('blur-items');
+            document.querySelectorAll('.stall-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
             isSpinning = true;
-            spinBtn.classList.add('spinning');
-            spinBtn.textContent = '停止选择！';
-            resultDiv.classList.add('blink');
-            speed = 50;
+            document.getElementById('spin-btn').textContent = '停止！';
+            targetIndex = Math.floor(Math.random() * stalls.length);
             animate();
         }
 
         function stopSpin() {
             isSpinning = false;
-            spinBtn.classList.remove('spinning');
-            spinBtn.textContent = '再选一次！';
-            resultDiv.classList.remove('blink');
-            cancelAnimationFrame(animationId);
+            const grid = document.getElementById('grid');
+            grid.classList.add('blur-items');
             
-            // 最终结果强调
-            resultDiv.style.transform = 'scale(1.1)';
-            setTimeout(() => resultDiv.style.transform = 'scale(1)', 200);
+            const selectedItem = stallItems[targetIndex];
+            selectedItem.classList.add('selected');
+            
+            document.getElementById('spin-btn').textContent = '重新选择';
         }
 
         function animate() {
             if (!isSpinning) return;
-            
-            // 随机切换效果
-            resultDiv.textContent = stalls[Math.floor(Math.random() * stalls.length)];
-            resultDiv.style.transform = `scale(${1 + Math.random()*0.1})`;
-            
-            // 速度逐渐变慢
-            speed = Math.min(300, speed * 1.08);
-            
-            // 动态调整更新频率
-            if (speed < 150) {
-                animationId = requestAnimationFrame(animate);
+
+            currentIndex = (currentIndex + 1) % stalls.length;
+            updateHighlightPosition(currentIndex);
+
+            const distanceToTarget = Math.abs(targetIndex - currentIndex);
+            if (distanceToTarget < 3) {
+                speed = Math.max(100, speed * 1.3);
             } else {
-                animationId = setTimeout(() => {
-                    requestAnimationFrame(animate);
-                }, speed - 100);
+                speed = Math.max(30, speed * 0.95);
             }
+
+            if (currentIndex === targetIndex && speed > 90) {
+                stopSpin();
+                return;
+            }
+
+            setTimeout(() => {
+                requestAnimationFrame(animate);
+            }, speed);
         }
 
-        // 初始显示随机推荐
-        resultDiv.textContent = stalls[Math.floor(Math.random() * stalls.length)];
+        // 初始化
+        init();
     </script>
 </body>
 </html>
