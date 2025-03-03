@@ -24,15 +24,14 @@
             max-width: 800px;
         }
 
+        /* 修改后的单图容器样式 */
         .image-container {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
             margin-bottom: 2rem;
         }
 
         .image-container img {
-            max-width: 45%;
+            width: 80%;
+            max-width: 500px;
             height: auto;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -41,37 +40,41 @@
 
         h1 {
             color: #ff5e62;
-            margin-bottom: 2rem;
+            margin: 1.5rem 0;
         }
 
         .grid {
             position: relative;
-            min-height: 300px;
+            min-height: 250px;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin: 2rem 0;
+            gap: 12px;
+            margin: 1.5rem 0;
             perspective: 1000px;
         }
 
         .stall-item {
-            padding: 1rem;
+            padding: 0.5rem;
+            height: 40px;
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 8px;
             transition: all 0.3s;
             position: relative;
             z-index: 1;
             transform-origin: center center;
             will-change: transform;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
         }
 
         .stall-item.selected {
-            transform: scale(2) translateY(-30%);
+            transform: scale(2) translateY(-20%);
             z-index: 10 !important;
             background: #fff;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .blur-items .stall-item:not(.selected) {
@@ -102,21 +105,12 @@
             margin-top: 1rem;
         }
 
-        #spin-btn:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
-        }
-
         @media (max-width: 600px) {
-            .stall-item.selected {
-                transform: scale(1.8) translateY(-25%);
-            }
-            .image-container {
-                flex-direction: column;
-                align-items: center;
-            }
             .image-container img {
-                max-width: 80%;
+                width: 90%;
+            }
+            .stall-item.selected {
+                transform: scale(1.8) translateY(-15%);
             }
         }
     </style>
@@ -124,12 +118,11 @@
 <body>
     <div class="container">
         <div class="image-container">
-            <!-- 替换以下图片路径 -->
-            <img src="1.jpg" alt="食堂档口1">
-            <img src="2.jpg" alt="食堂档口2">
+            <!-- 替换为你的图片路径 -->
+            <img src="1.jpg" alt="小呆呆">
         </div>
 
-        <h1>🎲 食堂轮盘选择 🍜</h1>
+        <h1>🎲 今日吃什么？ 🥢</h1>
         <div class="grid" id="grid"></div>
         <button id="spin-btn" onclick="toggleSpin()">开始选择！</button>
     </div>
@@ -137,10 +130,10 @@
     <script>
         // 自定义选项（修改此处）
         const stalls = [
-           "智慧称菜", "二楼麻辣烫", "牛肉面",
-            "美食街螺狮粉", "穆兰羊", "混沌",
-            "瓦香鸡",  "煲仔饭",
-            "汉堡炸鸡"
+            "麻辣香锅", "石锅拌饭", "兰州拉面",
+            "广式烧腊", "重庆小面", "黄焖鸡米饭",
+            "饺子坊", "轻食沙拉", "煲仔饭",
+            "日式拉面", "汉堡炸鸡", "瓦罐汤"
         ];
 
         let currentIndex = 0;
@@ -167,10 +160,10 @@
         function updateHighlightPosition(index) {
             const target = stallItems[index];
             const rect = target.getBoundingClientRect();
-            const gridRect = document.getElementById('grid').getBoundingClientRect();
+            const gridRect = grid.getBoundingClientRect();
             
-            highlightBox.style.width = `${rect.width}px`;
-            highlightBox.style.height = `${rect.height}px`;
+            highlightBox.style.width = `${rect.width + 1}px`;
+            highlightBox.style.height = `${rect.height + 1}px`;
             highlightBox.style.transform = `translate(
                 ${rect.left - gridRect.left}px, 
                 ${rect.top - gridRect.top}px
